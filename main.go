@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/huuloc2026/go-to-do.git/config"
+	"github.com/huuloc2026/go-to-do.git/database"
 )
 
 type TodoItem struct {
@@ -49,5 +51,7 @@ func main() {
 			"message": "pong",
 		})
 	})
+	config.LoadConfig()
+	database.ConnectDB()
 	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }
