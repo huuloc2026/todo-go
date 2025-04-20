@@ -36,6 +36,7 @@ func LoadConfig() {
 		log.Fatalf("Unable to decode into struct: %v", err)
 	}
 
+	// Log ra cấu hình đã được load
 	fmt.Printf("Loaded DB Config: %+v\n", AppConfig.DB)
 	log.Println("Load config oke")
 }

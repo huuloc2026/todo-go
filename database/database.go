@@ -11,7 +11,7 @@ import (
 
 var DB *gorm.DB
 
-func ConnectDB() {
+func ConnectDB() *gorm.DB {
 	dbCfg := config.AppConfig.DB
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=%t&loc=%s",
@@ -33,4 +33,5 @@ func ConnectDB() {
 	}
 
 	log.Println("✅ Connected to MySQL DB!")
+	return DB
 }

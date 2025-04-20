@@ -9,15 +9,27 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/huuloc2026/go-to-do.git/config"
 	"github.com/huuloc2026/go-to-do.git/database"
+	"gorm.io/gorm"
 )
 
 type TodoItem struct {
-	Id          int        `json:"id"`
-	Title       string     `json:"title"`
-	Description string     `json:"description"`
-	Status      string     `json:"status"`
-	CreatedAt   *time.Time `json:"created_at"`
-	UpdatedAt   *time.Time `json:"updated_at"`
+	Id          int        `json:"id" gorm:"column:id;"`
+	Title       string     `json:"title" gorm:"column:title;"`
+	Description string     `json:"description" gorm:"column:description;"`
+	Status      string     `json:"status" gorm:"column:status"`
+	CreatedAt   *time.Time `json:"created_at" gorm:"column:created_at"`
+	UpdatedAt   *time.Time `json:"updated_at" gorm:"column:updated_at;"`
+}
+
+type ToDoItemCreation struct {
+	Id          int    `json:"id" gorm:"column:id;"`
+	Title       string `json:"title" gorm:"column:title;"`
+	Description string `json:"description" gorm:"column:description;"`
+	Status      string `json:"status" gorm:"column:status"`
+}
+
+func (ToDoItemCreation) TableName() string {
+	return "todoTables"
 }
 
 func main() {
@@ -37,10 +49,12 @@ func main() {
 	log.Println(string(jsData))
 	r := gin.Default()
 	v1 := r.Group("/v1")
+	config.LoadConfig()
+	db := database.ConnectDB()
 	{
 		items := v1.Group("/items")
 		{
-			items.POST("")
+			items.POST("", CreateItem(db))
 			items.GET("/:id")
 			items.PATCH("/:id")
 			items.DELETE("/:id")
@@ -51,7 +65,23 @@ func main() {
 			"message": "pong",
 		})
 	})
-	config.LoadConfig()
-	database.ConnectDB()
+
 	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+}
+func CreateItem(db *gorm.DB) func(ctx *gin.Context) {
+	return func(c *gin.Context) {
+		var itemData ToDoItemCreation
+		if err := c.ShouldBind(&itemData); err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+			return
+		}
+		if err := db.Create(&itemData).Error; err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"data": itemData.Id,
+		})
+	}
 }
