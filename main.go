@@ -38,7 +38,20 @@ type ToDoItemUpdate struct {
 	Description *string `json:"description" gorm:"column:description;"`
 	Status      *string `json:"status" gorm:"column:status"`
 }
+type Paging struct {
+	Page  int   `json:"page" form:"page"`
+	Limit int   `json:"limit" form:"limit"`
+	Total int64 `json:"total" form:"-"`
+}
 
+func (p *Paging) Paging() {
+	if p.Page < 1 {
+		p.Page = 1
+	}
+	if p.Limit == 0 {
+		p.Limit = 10 // default limit
+	}
+}
 func (TodoItem) TableName() string {
 	return "todoTables"
 }
@@ -68,6 +81,7 @@ func main() {
 		items := v1.Group("/items")
 		{
 			items.POST("", CreateItem(db))
+			items.GET("/", ListItem(db))
 			items.GET("/:id", GetItems(db))
 			items.PATCH("/:id", UpdateItems(db))
 			items.DELETE("/:id", DeleteItems(db))
@@ -141,6 +155,7 @@ func UpdateItems(db *gorm.DB) func(ctx *gin.Context) {
 		})
 	}
 }
+
 func DeleteItems(db *gorm.DB) func(ctx *gin.Context) {
 	return func(c *gin.Context) {
 
@@ -160,6 +175,46 @@ func DeleteItems(db *gorm.DB) func(ctx *gin.Context) {
 
 		c.JSON(http.StatusOK, gin.H{
 			"data": true,
+		})
+	}
+}
+
+func ListItem(db *gorm.DB) func(ctx *gin.Context) {
+	return func(c *gin.Context) {
+		var (
+			listItem []TodoItem
+			paging   Paging
+		)
+
+		// Parse query params page và limit
+		if err := c.ShouldBindQuery(&paging); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		paging.Paging()
+
+		offset := (paging.Page - 1) * paging.Limit
+
+		var total int64
+		if err := db.Table(TodoItem{}.TableName()).Count(&total).Error; err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+			return
+		}
+		paging.Total = total
+
+		if err := db.Table(TodoItem{}.TableName()).
+			Order("id DESC").
+			Limit(paging.Limit).
+			Offset(offset).
+			Find(&listItem).Error; err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"data":   listItem,
+			"paging": paging,
 		})
 	}
 }
