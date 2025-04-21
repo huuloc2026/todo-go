@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -32,6 +33,18 @@ func (ToDoItemCreation) TableName() string {
 	return "todoTables"
 }
 
+type ToDoItemUpdate struct {
+	Title       *string `json:"title" gorm:"column:title;"`
+	Description *string `json:"description" gorm:"column:description;"`
+	Status      *string `json:"status" gorm:"column:status"`
+}
+
+func (TodoItem) TableName() string {
+	return "todoTables"
+}
+func (ToDoItemUpdate) TableName() string {
+	return "todoTables"
+}
 func main() {
 	now := time.Now().UTC()
 	item := TodoItem{
@@ -55,9 +68,9 @@ func main() {
 		items := v1.Group("/items")
 		{
 			items.POST("", CreateItem(db))
-			items.GET("/:id")
-			items.PATCH("/:id")
-			items.DELETE("/:id")
+			items.GET("/:id", GetItems(db))
+			items.PATCH("/:id", UpdateItems(db))
+			items.DELETE("/:id", DeleteItems(db))
 		}
 	}
 	r.GET("/ping", func(c *gin.Context) {
@@ -66,7 +79,7 @@ func main() {
 		})
 	})
 
-	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+	r.Run()
 }
 func CreateItem(db *gorm.DB) func(ctx *gin.Context) {
 	return func(c *gin.Context) {
@@ -82,6 +95,71 @@ func CreateItem(db *gorm.DB) func(ctx *gin.Context) {
 
 		c.JSON(http.StatusOK, gin.H{
 			"data": itemData.Id,
+		})
+	}
+}
+
+func GetItems(db *gorm.DB) func(ctx *gin.Context) {
+	return func(c *gin.Context) {
+		var itemData ToDoItemCreation
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+			return
+		}
+		if err := db.Where("id = ?", id).First(&itemData).Error; err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"data": itemData,
+		})
+	}
+}
+
+func UpdateItems(db *gorm.DB) func(ctx *gin.Context) {
+	return func(c *gin.Context) {
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+			return
+		}
+		var updated ToDoItemUpdate
+
+		if err := c.ShouldBind(&updated); err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+			return
+		}
+		if err := db.Where("id = ?", id).Updates(&updated).Error; err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"data": true,
+		})
+	}
+}
+func DeleteItems(db *gorm.DB) func(ctx *gin.Context) {
+	return func(c *gin.Context) {
+
+		id, err := strconv.Atoi(c.Param("id"))
+
+		if err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+			return
+		}
+
+		var updated ToDoItemUpdate
+
+		if err := db.Table(TodoItem{}.TableName()).Where("id = ?", id).Delete(&updated).Error; err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"data": true,
 		})
 	}
 }
