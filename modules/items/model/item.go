@@ -1,6 +1,12 @@
 package model
 
-import "github.com/huuloc2026/go-to-do.git/common"
+import (
+	"errors"
+	"log"
+	"strings"
+
+	"github.com/huuloc2026/go-to-do.git/common"
+)
 
 type TodoItem struct {
 	common.SQLModel
@@ -16,6 +22,18 @@ type ToDoItemCreation struct {
 	Status      string `json:"status" gorm:"column:status"`
 }
 
+var (
+	ErrTitleCannotEmpty = errors.New("title cannot be empty")
+)
+
+func (i *ToDoItemCreation) Validate() error {
+	i.Title = strings.TrimSpace(i.Title)
+	log.Println("oke", i.Title)
+	if i.Title == "" {
+		return ErrTitleCannotEmpty
+	}
+	return nil
+}
 func (ToDoItemCreation) TableName() string {
 	return "todoTables"
 }

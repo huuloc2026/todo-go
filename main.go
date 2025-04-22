@@ -21,7 +21,7 @@ func main() {
 	{
 		items := v1.Group("/items")
 		{
-			items.POST("", ginItem.CreateItem(db))
+			items.POST("/", ginItem.CreateItem(db))
 			items.GET("/", ListItem(db))
 			items.GET("/:id", GetItems(db))
 			items.PATCH("/:id", UpdateItems(db))

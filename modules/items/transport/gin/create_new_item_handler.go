@@ -20,7 +20,11 @@ func CreateItem(db *gorm.DB) func(ctx *gin.Context) {
 		}
 		store := storage.NewStore(db)
 		bussiness := biz.CreateItemStorage(store)
-		bussiness.CreateItem(c.Request.Context(), &itemData)
+		if err := bussiness.CreateItem(c.Request.Context(), &itemData); err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{
+				"error": err.Error(),
+			})
+		}
 		c.JSON(http.StatusOK, common.SimpleSuccessResponse(itemData.Id))
 	}
 }
