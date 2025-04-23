@@ -13,7 +13,6 @@ var DB *gorm.DB
 
 func ConnectDB() *gorm.DB {
 	dbCfg := config.AppConfig.DB
-
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=%t&loc=%s",
 		dbCfg.User,
 		dbCfg.Password,
